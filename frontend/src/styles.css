@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+/* Map the design system's --pl-* tokens (delivered by plugin-kit.css + the
+   protoagent:init/theme handshake) onto Tailwind theme slots. `inline` keeps the
+   var() reference at the use site, so a live console re-theme restyles the app
+   with no rebuild. Fallbacks echo the DS dark palette (brand lavender #9b87f2). */
+@theme inline {
+  --color-bg: var(--pl-color-bg, #101014);
+  --color-bg-subtle: var(--pl-color-bg-subtle, #16161c);
+  --color-bg-raised: var(--pl-color-bg-raised, #1b1b23);
+  --color-bg-inset: var(--pl-color-bg-inset, #0c0c10);
+  --color-bg-hover: var(--pl-color-bg-hover, #22222b);
+  --color-fg: var(--pl-color-fg, #e8e8ee);
+  --color-fg-muted: var(--pl-color-fg-muted, #9b9ba8);
+  --color-fg-subtle: var(--pl-color-fg-subtle, #6e6e7a);
+  --color-border: var(--pl-color-border, #26262f);
+  --color-border-strong: var(--pl-color-border-strong, #3a3a46);
+  --color-accent: var(--pl-color-accent, #9b87f2);
+  --color-accent-hover: var(--pl-color-accent-hover, #ab99f5);
+  --color-on-accent: var(--pl-color-fg-on-accent, #14121f);
+  --color-focus: var(--pl-color-focus, #9b87f2);
+  --color-error: var(--pl-color-status-error, #e5484d);
+  --color-success: var(--pl-color-status-success, #46a758);
+  --color-warning: var(--pl-color-status-warning, #ffb224);
+  --color-reasoning: var(--pl-color-reasoning-bg, #17151f);
+
+  --font-sans: var(--pl-font-sans, ui-sans-serif, system-ui, sans-serif);
+  --font-mono: var(--pl-font-mono, ui-monospace, "SF Mono", Menlo, monospace);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-fg);
+  background: var(--color-bg);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+textarea {
+  field-sizing: content; /* auto-grow where supported; JS fallback in ui.tsx */
+}
+
+/* rendered markdown (sanitized) */
+.md > :first-child { margin-top: 0; }
+.md > :last-child { margin-bottom: 0; }
+.md h1, .md h2, .md h3 { font-weight: 600; margin: 1em 0 0.4em; }
+.md h1 { font-size: 1.25em; } .md h2 { font-size: 1.1em; } .md h3 { font-size: 1em; }
+.md p, .md ul, .md ol { margin: 0.5em 0; line-height: 1.55; }
+.md ul { list-style: disc; padding-left: 1.4em; }
+.md ol { list-style: decimal; padding-left: 1.4em; }
+.md code { font-family: var(--font-mono); font-size: 0.92em; background: var(--color-bg-inset);
+  border: 1px solid var(--color-border); border-radius: 4px; padding: 0.08em 0.35em; }
+.md pre { background: var(--color-bg-inset); border: 1px solid var(--color-border);
+  border-radius: 8px; padding: 10px 12px; overflow-x: auto; margin: 0.6em 0; }
+.md pre code { background: none; border: none; padding: 0; }
+.md blockquote { border-left: 3px solid var(--color-border-strong); padding-left: 10px;
+  color: var(--color-fg-muted); margin: 0.5em 0; }
+.md a { color: var(--color-accent); text-decoration: underline; }
+.md table { border-collapse: collapse; margin: 0.6em 0; }
+.md th, .md td { border: 1px solid var(--color-border); padding: 4px 8px; }

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Prompt Lab</title>
+    <script>
+      // RULE 3 — slug-aware base: "" on the host window, "/agents/<slug>" through
+      // the fleet proxy. Everything (the DS kit href included) prefixes it.
+      window.__base = location.pathname.split("/plugins/")[0];
+      // RULE 4 — the DS kit CSS, linked off BASE so the view re-themes live.
+      (function () {
+        var l = document.createElement("link");
+        l.rel = "stylesheet";
+        l.href = window.__base + "/_ds/plugin-kit.css";
+        document.head.appendChild(l);
+      })();
+    </script>
+    <style>
+      /* pre-React paint: match the console theme, no white flash */
+      html, body { margin: 0; background: var(--pl-color-bg, #101014); }
+    </style>
+    <script type="module" crossorigin src="./assets/index-C5er86VE.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-DFpW3BwI.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

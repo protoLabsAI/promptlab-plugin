@@ -1,0 +1,44 @@
+# Prompt Lab — a prompt manager + playground for protoAgent.
+# DATA ONLY: the host reads this without importing plugin code. Keep `version`
+# in lockstep with pyproject.toml (tests/test_manifest.py enforces it).
+id: promptlab
+name: Prompt Lab
+version: 0.1.0
+description: >-
+  Prompt manager + playground. A shadcn-style console view for writing, versioning,
+  and test-running prompts against any configured model (gateway or native OAuth,
+  streamed with live reasoning), plus agent tools (list/get/render/save) so managed
+  prompts are usable from chat, subagents, and workflows. Prompts live in the
+  instance data dir with notes-style coalesced version history.
+enabled: false                 # ship disabled — enabling is the operator's trust decision
+repository: https://github.com/protoLabsAI/promptlab-plugin
+# /api/config/models/available (the cross-provider model list the picker uses)
+# shipped in host v0.134.0.
+min_protoagent_version: "0.134.0"
+
+config_section: promptlab
+config:
+  # Version-history knobs (the notes-plugin lesson: the editor autosaves, so a
+  # same-author write inside the coalesce window must NOT mint a version).
+  max_versions: 50
+  coalesce_seconds: 300
+  # Default model slot for new prompts ("" = the host's configured default model).
+  default_model: ""
+
+views:
+  # Full left-rail surface (default placement) — the playground wants the room.
+  - { id: promptlab, label: "Prompt Lab", icon: "FlaskConical", path: /plugins/promptlab/view }
+
+# The Vite-built JS/CSS the view page loads. The view PAGE path is auto-exempted
+# from the bearer gate, but an ES-module import can't carry an Authorization header
+# either (the notes-plugin vendor lesson) — so the asset dir must be exempt too.
+# Served from an exact-file allowlist; the subtree can't be walked.
+public_paths:
+  - "/plugins/promptlab/assets/"
+
+capabilities:
+  # Model traffic goes through the HOST's own LLM client (graph.llm.create_llm),
+  # i.e. to whatever gateway/providers the operator has already configured — the
+  # plugin adds no endpoints of its own.
+  network: ["host-configured model providers"]
+  filesystem: scoped           # ~/.protoagent/promptlab (per-instance)
