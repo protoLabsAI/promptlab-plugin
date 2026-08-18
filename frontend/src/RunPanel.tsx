@@ -79,7 +79,9 @@ export function RunPanel({
             <Label htmlFor="run-model">Model</Label>
             <Select id="run-model" value={doc.model} onChange={(e) => onChange({ model: e.target.value })}>
               <option value="">Host default</option>
-              {lanes.map((lane) => (
+              {lanes
+                .filter((lane) => lane.models.length > 0 || !lane.configured)
+                .map((lane) => (
                 <optgroup
                   key={lane.provider}
                   label={lane.configured ? lane.provider : `${lane.provider} — ${lane.reason || "not configured"}`}
