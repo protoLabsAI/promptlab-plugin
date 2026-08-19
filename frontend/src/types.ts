@@ -63,6 +63,9 @@ export function emptyDoc(): PromptDoc {
       { role: "user", content: "" },
     ],
     model: "",
-    params: {},
+    // Sensible starting points a playground run shouldn't make you type: a
+    // balanced temperature and a cap that won't truncate a long answer. Both
+    // stay fully editable; clearing a field falls back to the provider default.
+    params: { temperature: 0.7, max_tokens: 2048 },
   };
 }

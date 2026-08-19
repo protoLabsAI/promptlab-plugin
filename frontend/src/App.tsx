@@ -22,6 +22,13 @@ export default function App() {
   // Narrow-panel prompt-list drawer (only reachable below @4xl — the static
   // sidebar takes over above it, so stale `true` is harmless there).
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Armed state for the two-step delete; disarms itself after a beat.
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  useEffect(() => {
+    if (!confirmDelete) return;
+    const t = setTimeout(() => setConfirmDelete(false), 4000);
+    return () => clearTimeout(t);
+  }, [confirmDelete]);
   const [varValues, setVarValues] = useState<Record<string, Record<string, string>>>({});
   const docRef = useRef<{ doc: PromptDoc | null; isNew: boolean; dirty: boolean }>({
     doc: null,
@@ -84,6 +91,7 @@ export default function App() {
       setIsNew(false);
       setDirty(false);
       setSaveError("");
+      setConfirmDelete(false);
     } catch (err) {
       setSaveError(String(err));
     }
@@ -95,15 +103,27 @@ export default function App() {
     setDirty(false);
     setSaveError("");
     setShowHistory(false);
+    setConfirmDelete(false);
   }
 
+  // Two-step in-DOM delete confirmation. window.confirm is a trap here: the
+  // view runs in the console's sandboxed iframe (no allow-modals), where
+  // confirm() silently returns false — delete looked broken with no error.
   async function remove() {
     if (!doc || isNew) return;
-    if (!window.confirm(`Delete prompt "${doc.name || doc.id}"? Its history stays on disk.`)) return;
-    await deletePrompt(doc.id).catch(() => {});
-    setDoc(null);
-    setShowHistory(false);
-    refreshList();
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    setConfirmDelete(false);
+    try {
+      await deletePrompt(doc.id);
+      setDoc(null);
+      setShowHistory(false);
+      refreshList();
+    } catch (err) {
+      setSaveError(String(err instanceof Error ? err.message : err));
+    }
   }
 
   async function restore(versionId: string) {
@@ -205,8 +225,14 @@ export default function App() {
                 >
                   <History className="h-4 w-4" />
                 </Button>
-                <Button variant="destructive" size="icon" title="Delete prompt" onClick={remove}>
+                <Button
+                  variant="destructive"
+                  size={confirmDelete ? "sm" : "icon"}
+                  title={confirmDelete ? "Click again to delete — history stays on disk" : "Delete prompt"}
+                  onClick={remove}
+                >
                   <Trash2 className="h-4 w-4" />
+                  {confirmDelete && "Delete?"}
                 </Button>
               </>
             )}
