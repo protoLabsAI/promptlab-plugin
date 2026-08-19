@@ -20,7 +20,7 @@ export function Editor({
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 @xl/lab:grid-cols-2">
         <div>
           <Label htmlFor="p-name">Name</Label>
           <Input

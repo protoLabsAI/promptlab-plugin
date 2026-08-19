@@ -72,7 +72,9 @@ export function RunPanel({
   const started = running || answer || reasoning || error;
 
   return (
-    <div className="flex w-[44%] max-w-[600px] min-w-[320px] shrink-0 flex-col border-l border-border">
+    // Mobile-first: a bottom pane under the editor by default; a right column
+    // once the panel is wide enough for the split (@3xl, per the App container).
+    <div className="flex h-[46%] w-full shrink-0 flex-col border-t border-border @3xl/lab:h-auto @3xl/lab:w-[44%] @3xl/lab:min-w-[320px] @3xl/lab:max-w-[600px] @3xl/lab:border-t-0 @3xl/lab:border-l">
       <div className="flex flex-col gap-3 border-b border-border p-4">
         <div className="grid grid-cols-[1fr_auto_auto] items-end gap-2">
           <div>

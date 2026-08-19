@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, FlaskConical, History, Save, Trash2 } from "lucide-react";
+import { Check, FlaskConical, History, PanelLeft, Save, Trash2 } from "lucide-react";
 import { deletePrompt, getPrompt, listPrompts, restoreVersion, savePrompt } from "./api";
 import { Editor } from "./Editor";
 import { HistoryPanel } from "./HistoryPanel";
@@ -19,6 +19,9 @@ export default function App() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [showHistory, setShowHistory] = useState(false);
+  // Narrow-panel prompt-list drawer (only reachable below @4xl — the static
+  // sidebar takes over above it, so stale `true` is harmless there).
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [varValues, setVarValues] = useState<Record<string, Record<string, string>>>({});
   const docRef = useRef<{ doc: PromptDoc | null; isNew: boolean; dirty: boolean }>({
     doc: null,
@@ -119,13 +122,59 @@ export default function App() {
     setDirty(true);
   };
 
+  // Drawer actions also dismiss it — selecting a prompt on a phone-width panel
+  // should land you in the editor, not behind an open drawer.
+  const drawerSelect = (id: string) => {
+    setDrawerOpen(false);
+    select(id);
+  };
+  const drawerNew = () => {
+    setDrawerOpen(false);
+    startNew();
+  };
+
   return (
-    <div className="flex h-full bg-bg text-fg">
-      <Sidebar prompts={prompts} selectedId={isNew ? null : (doc?.id ?? null)} onSelect={select} onNew={startNew} />
+    // Mobile-first, sized by the PANEL not the viewport (the learning-wiki
+    // pattern): this view renders inside the console rail / fleet proxy, where
+    // viewport media queries lie. Base layout = drawer sidebar + stacked panes;
+    // container variants add the desktop arrangement back at width:
+    //   @3xl (768px)  editor and run panel go side by side
+    //   @4xl (896px)  the prompt list becomes a static sidebar
+    <div className="@container/lab relative flex h-full bg-bg text-fg">
+      <Sidebar
+        className="hidden @4xl/lab:flex"
+        prompts={prompts}
+        selectedId={isNew ? null : (doc?.id ?? null)}
+        onSelect={select}
+        onNew={startNew}
+      />
+      {drawerOpen && (
+        <div className="absolute inset-0 z-20 @4xl/lab:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setDrawerOpen(false)} />
+          <div className="absolute inset-y-0 left-0 shadow-xl">
+            <Sidebar
+              className="flex h-full"
+              prompts={prompts}
+              selectedId={isNew ? null : (doc?.id ?? null)}
+              onSelect={drawerSelect}
+              onNew={drawerNew}
+            />
+          </div>
+        </div>
+      )}
 
       {doc ? (
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="@4xl/lab:hidden"
+              title="Prompts"
+              onClick={() => setDrawerOpen(true)}
+            >
+              <PanelLeft className="h-4 w-4" />
+            </Button>
             <h2 className="truncate text-[13px] font-semibold">
               {isNew ? "New prompt" : doc.name || doc.id}
             </h2>
@@ -163,7 +212,7 @@ export default function App() {
             )}
           </header>
 
-          <div className="flex min-h-0 flex-1">
+          <div className="flex min-h-0 flex-1 flex-col @3xl/lab:flex-row">
             <Editor doc={doc} isNew={isNew} onChange={patch} onIdChange={(id) => patch({ id })} />
             <RunPanel
               doc={doc}
@@ -174,19 +223,39 @@ export default function App() {
               onChange={patch}
             />
             {showHistory && !isNew && (
-              <HistoryPanel promptId={doc.id} onRestore={restore} onClose={() => setShowHistory(false)} />
+              <>
+                {/* Below @3xl the history panel overlays instead of squeezing a
+                    third column into a stacked layout. */}
+                <div
+                  className="absolute inset-0 z-10 bg-black/40 @3xl/lab:hidden"
+                  onClick={() => setShowHistory(false)}
+                />
+                <HistoryPanel
+                  className="absolute inset-y-0 right-0 z-20 shadow-xl @3xl/lab:static @3xl/lab:z-auto @3xl/lab:shadow-none"
+                  promptId={doc.id}
+                  onRestore={restore}
+                  onClose={() => setShowHistory(false)}
+                />
+              </>
             )}
           </div>
         </div>
       ) : (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3">
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-4">
           <FlaskConical className="h-10 w-10 text-fg-subtle" />
           <p className="max-w-sm text-center text-[13px] text-fg-muted">
             Write, version, and test-run prompts against any configured model. Managed prompts are
             live for the agent via the <code className="font-mono text-[12px]">get_prompt</code> /{" "}
             <code className="font-mono text-[12px]">render_prompt</code> tools.
           </p>
-          <Button onClick={startNew}>New prompt</Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={startNew}>New prompt</Button>
+            {/* On a narrow panel the sidebar is a drawer, so the empty state needs
+                its own way into the prompt list. */}
+            <Button variant="ghost" className="@4xl/lab:hidden" onClick={() => setDrawerOpen(true)}>
+              <PanelLeft className="h-3.5 w-3.5" /> Browse
+            </Button>
+          </div>
         </div>
       )}
     </div>

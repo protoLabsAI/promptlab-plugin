@@ -8,11 +8,13 @@ export function Sidebar({
   selectedId,
   onSelect,
   onNew,
+  className,
 }: {
   prompts: PromptSummary[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onNew: () => void;
+  className?: string;
 }) {
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
@@ -23,7 +25,7 @@ export function Sidebar({
     : prompts;
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-bg-subtle">
+    <aside className={cn("w-60 shrink-0 flex-col border-r border-border bg-bg-subtle", className ?? "flex")}>
       <div className="flex h-11 items-center gap-2 border-b border-border px-3">
         <FlaskConical className="h-4 w-4 text-accent" />
         <span className="text-[13px] font-semibold">Prompt Lab</span>
@@ -51,7 +53,9 @@ export function Sidebar({
             key={p.id}
             onClick={() => onSelect(p.id)}
             className={cn(
-              "mb-0.5 block w-full rounded-md border-l-2 px-2.5 py-1.5 text-left transition-colors",
+              // Mobile-first touch floor (the learning-wiki pattern, ADR 0086):
+              // comfortable tap targets by default, desktop density at width.
+              "mb-0.5 block w-full rounded-md border-l-2 px-2.5 py-2.5 text-left transition-colors @4xl/lab:py-1.5",
               p.id === selectedId
                 ? "border-accent bg-bg-hover"
                 : "border-transparent hover:bg-bg-hover/60",

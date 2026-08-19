@@ -8,10 +8,12 @@ export function HistoryPanel({
   promptId,
   onRestore,
   onClose,
+  className,
 }: {
   promptId: string;
   onRestore: (versionId: string) => void;
   onClose: () => void;
+  className?: string;
 }) {
   const [versions, setVersions] = useState<Version[]>([]);
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -29,7 +31,7 @@ export function HistoryPanel({
   }, [promptId, previewId]);
 
   return (
-    <aside className="flex w-72 shrink-0 flex-col border-l border-border bg-bg-subtle">
+    <aside className={cn("flex w-72 shrink-0 flex-col border-l border-border bg-bg-subtle", className)}>
       <div className="flex h-11 items-center justify-between border-b border-border px-3">
         <span className="text-[12px] font-semibold">History</span>
         <Button variant="ghost" size="icon" onClick={onClose} title="Close history">
