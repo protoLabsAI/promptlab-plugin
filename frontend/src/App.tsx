@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, FlaskConical, History, PanelLeft, Save, Trash2 } from "lucide-react";
+import { Check, ChevronDown, FlaskConical, History, PanelLeft, Save, Trash2 } from "lucide-react";
 import { deletePrompt, getPrompt, listPrompts, restoreVersion, savePrompt } from "./api";
 import { Editor } from "./Editor";
 import { HistoryPanel } from "./HistoryPanel";
@@ -186,16 +186,21 @@ export default function App() {
       {doc ? (
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="@4xl/lab:hidden"
-              title="Prompts"
-              onClick={() => setDrawerOpen(true)}
-            >
-              <PanelLeft className="h-4 w-4" />
-            </Button>
-            <h2 className="truncate text-[13px] font-semibold">
+            {/* Below @4xl the name itself is the drawer toggle — the chevron is
+                the "tap to switch" signal. At @4xl+ the static sidebar handles
+                switching, so the name reverts to a plain heading. */}
+            <h2 className="min-w-0 @4xl/lab:hidden">
+              <button
+                type="button"
+                className="-ml-1.5 flex w-full min-w-0 items-center gap-1 rounded-md px-1.5 py-1 text-[13px] font-semibold hover:bg-bg-hover"
+                title="Switch prompt"
+                onClick={() => setDrawerOpen(true)}
+              >
+                <span className="truncate">{isNew ? "New prompt" : doc.name || doc.id}</span>
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-fg-subtle" />
+              </button>
+            </h2>
+            <h2 className="hidden truncate text-[13px] font-semibold @4xl/lab:block">
               {isNew ? "New prompt" : doc.name || doc.id}
             </h2>
             <span className="mr-auto text-[11px] text-fg-subtle">

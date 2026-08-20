@@ -44,3 +44,7 @@ jobs:
       - name: Build (type-check + bundle)
         working-directory: frontend
         run: npm ci && npm run build
+
+      - name: Test
+        working-directory: frontend
+        run: npm test
