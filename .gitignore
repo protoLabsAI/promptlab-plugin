@@ -3,7 +3,8 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .venv/
-node_modules/
+# no trailing slash: must also match a symlinked node_modules (a symlink is not a directory to git)
+node_modules
 frontend/dist/
 .DS_Store
 .proto/memory/
