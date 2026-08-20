@@ -59,3 +59,13 @@ def test_static_build_is_committed():
     assert "/_ds/plugin-kit.js" in bundle
     assert "/api/plugins/promptlab" in bundle
     assert "http://localhost" not in bundle
+
+
+def test_mobile_prompt_switcher_in_bundle():
+    # Below @4xl the header's prompt name IS the drawer toggle (App.tsx): a
+    # ChevronDown affordance titled "Switch prompt" replaced the old standalone
+    # PanelLeft header button. Lucide icon names and title strings survive
+    # minification, so the committed bundle is checkable directly.
+    bundle = "".join(p.read_text(encoding="utf-8") for p in (ROOT / "static" / "assets").glob("*.js"))
+    assert "ChevronDown" in bundle
+    assert "Switch prompt" in bundle
