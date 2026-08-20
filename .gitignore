@@ -6,3 +6,6 @@ __pycache__/
 node_modules/
 frontend/dist/
 .DS_Store
+.proto/memory/
+.proto/session-notes.md
+.proto/repo-map-cache.json
