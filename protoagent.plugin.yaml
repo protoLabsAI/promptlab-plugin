@@ -3,7 +3,7 @@
 # in lockstep with pyproject.toml (tests/test_manifest.py enforces it).
 id: promptlab
 name: Prompt Lab
-version: 0.1.3
+version: 0.1.4
 description: >-
   Prompt manager + playground. A shadcn-style console view for writing, versioning,
   and test-running prompts against any configured model (gateway or native OAuth,

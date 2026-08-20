@@ -33,9 +33,23 @@ def set_host_config(getter: Callable | None) -> None:
 def _default_llm_factory(model: str, params: dict):
     from graph.llm import create_llm  # host-only, lazy
 
-    if _host_config is None:
+    cfg_get = _host_config
+    if cfg_get is None:
+        # Cold-boot resilience: register() runs BEFORE the server wires
+        # registry.host (agent_init loads plugins early, populates HOST late),
+        # so the register-time wiring silently skips on a fresh boot — the exact
+        # failure the desktop app hit after its v0.141.0 update restart. The
+        # HOST singleton is always populated before any REQUEST can arrive, so
+        # read it live instead of depending on registration order.
+        try:
+            from graph.plugins.host import HOST  # host-only, lazy
+
+            cfg_get = HOST.config
+        except Exception:  # noqa: BLE001 — host-free context: fall through to the error
+            cfg_get = None
+    if cfg_get is None:
         raise RuntimeError("promptlab: no host config available (plugin not registered?)")
-    llm = create_llm(_host_config(), model_name=model or None)
+    llm = create_llm(cfg_get(), model_name=model or None)
     if params:
         try:
             llm = llm.bind(**params)
