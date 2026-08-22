@@ -31,6 +31,26 @@ export const savePrompt = (id: string, doc: PromptDoc) =>
 export const deletePrompt = (id: string) =>
   apiFetch(`${P}/prompts/${id}`, { method: "DELETE" }).then((r) => json<{ deleted: boolean }>(r));
 
+// Streams the export through a blob URL so the browser saves a file — the
+// gated route needs the bearer, so a plain <a href> can't do it.
+export const exportPrompt = (id: string) =>
+  apiFetch(`${P}/prompts/${id}/export`).then(async (r) => {
+    if (!r.ok) throw new Error(`export failed: ${r.status}`);
+    const blob = await r.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${id}.prompt.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+export const importPrompt = (data: PromptDoc, overwrite = false) =>
+  apiFetch(`${P}/import${overwrite ? "?overwrite=true" : ""}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  }).then((r) => json<PromptDoc>(r));
+
 export const listVersions = (id: string) =>
   apiFetch(`${P}/prompts/${id}/versions`).then((r) => json<{ versions: Version[] }>(r).then((d) => d.versions));
 

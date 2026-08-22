@@ -42,6 +42,20 @@ class RunBody(BaseModel):
     variables: dict[str, str] = Field(default_factory=dict)
 
 
+class ImportBody(BaseModel):
+    """An exported ``.prompt.json`` — the doc shape with the id INSIDE the body
+    (PUT carries it in the URL instead). Extra export keys (``variables``,
+    ``updated_at``, ``updated_by``) are ignored; they get recomputed on save."""
+
+    id: str
+    name: str = ""
+    description: str = ""
+    tags: list[str] = Field(default_factory=list)
+    messages: list[dict] = Field(default_factory=list)
+    model: str = ""
+    params: dict = Field(default_factory=dict)
+
+
 def build_view_router(static_dir: Path = STATIC_DIR) -> APIRouter:
     router = APIRouter()
 
@@ -95,6 +109,31 @@ def build_data_router(store: PromptStore, run_stream: Optional[Callable] = None)
     @router.delete("/prompts/{prompt_id}")
     async def _delete(prompt_id: str) -> dict:
         return {"deleted": _ok_id(lambda: store.delete(prompt_id))}
+
+    @router.get("/prompts/{prompt_id}/export")
+    async def _export(prompt_id: str) -> Response:
+        doc = _ok_id(lambda: store.get(prompt_id))
+        if doc is None:
+            raise HTTPException(status_code=404, detail="unknown prompt")
+        # The doc's own shape as JSON — no envelope; the id travels in the body
+        # so the file can be imported (or re-id'd) on another instance.
+        return Response(
+            content=json.dumps(doc, indent=2),
+            media_type="application/json",
+            headers={"Content-Disposition": f'attachment; filename="{prompt_id}.prompt.json"'},
+        )
+
+    @router.post("/import")
+    async def _import(body: ImportBody, overwrite: bool = False) -> dict:
+        existing = _ok_id(lambda: store.get(body.id))
+        if existing is not None and not overwrite:
+            raise HTTPException(
+                status_code=409,
+                detail=f"prompt '{body.id}' already exists (pass ?overwrite=true to replace)",
+            )
+        # by="import" keeps provenance in history and stops the coalesce window
+        # from folding the import into an operator editing burst.
+        return _ok_id(lambda: store.save(body.id, body.model_dump(), by="import"))
 
     @router.get("/prompts/{prompt_id}/versions")
     async def _versions(prompt_id: str) -> dict:
