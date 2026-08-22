@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, FlaskConical, History, PanelLeft, Save, Trash2 } from "lucide-react";
-import { deletePrompt, getPrompt, listPrompts, restoreVersion, savePrompt } from "./api";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
+import { Check, ChevronDown, Download, FlaskConical, History, PanelLeft, Save, Trash2, Upload } from "lucide-react";
+import { deletePrompt, exportPrompt, getPrompt, importPrompt, listPrompts, restoreVersion, savePrompt } from "./api";
 import { Editor } from "./Editor";
 import { HistoryPanel } from "./HistoryPanel";
 import { RunPanel } from "./RunPanel";
@@ -29,6 +29,16 @@ export default function App() {
     const t = setTimeout(() => setConfirmDelete(false), 4000);
     return () => clearTimeout(t);
   }, [confirmDelete]);
+  // Armed state for a conflicting import — same two-step in-DOM pattern as
+  // delete (window.confirm is dead in the sandboxed iframe). Holds the parsed
+  // doc so the second click can retry with overwrite.
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [pendingImport, setPendingImport] = useState<PromptDoc | null>(null);
+  useEffect(() => {
+    if (!pendingImport) return;
+    const t = setTimeout(() => setPendingImport(null), 4000);
+    return () => clearTimeout(t);
+  }, [pendingImport]);
   const [varValues, setVarValues] = useState<Record<string, Record<string, string>>>({});
   const docRef = useRef<{ doc: PromptDoc | null; isNew: boolean; dirty: boolean }>({
     doc: null,
@@ -126,6 +136,45 @@ export default function App() {
     }
   }
 
+  async function applyImport(data: PromptDoc, overwrite: boolean) {
+    try {
+      await importPrompt(data, overwrite);
+      setPendingImport(null);
+      refreshList();
+      select(data.id);
+    } catch (err) {
+      const msg = String(err instanceof Error ? err.message : err);
+      if (!overwrite && msg.includes("already exists")) {
+        setPendingImport(data); // arm — the next click retries with overwrite
+      } else {
+        setSaveError(msg);
+      }
+    }
+  }
+
+  function importClick() {
+    if (pendingImport) {
+      applyImport(pendingImport, true);
+      return;
+    }
+    fileRef.current?.click();
+  }
+
+  function handleImportFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // let the same file be picked again
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        applyImport(JSON.parse(String(reader.result)) as PromptDoc, false);
+      } catch {
+        setSaveError("import failed — file is not valid JSON");
+      }
+    };
+    reader.readAsText(file);
+  }
+
   async function restore(versionId: string) {
     if (!doc) return;
     try {
@@ -161,6 +210,7 @@ export default function App() {
     //   @3xl (768px)  editor and run panel go side by side
     //   @4xl (896px)  the prompt list becomes a static sidebar
     <div className="@container/lab relative flex h-full bg-bg text-fg">
+      <input ref={fileRef} type="file" accept=".json,.prompt.json" hidden onChange={handleImportFile} />
       <Sidebar
         className="hidden @4xl/lab:flex"
         prompts={prompts}
@@ -222,6 +272,22 @@ export default function App() {
               </Button>
             ) : (
               <>
+                <Button variant="ghost" size="icon" title="Export prompt" onClick={() => exportPrompt(doc.id)}>
+                  <Download className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size={pendingImport ? "sm" : "icon"}
+                  title={
+                    pendingImport
+                      ? `"${pendingImport.id}" exists — click again to overwrite`
+                      : "Import prompt"
+                  }
+                  onClick={importClick}
+                >
+                  <Upload className="h-4 w-4" />
+                  {pendingImport && "Overwrite?"}
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -281,12 +347,26 @@ export default function App() {
           </p>
           <div className="flex items-center gap-2">
             <Button onClick={startNew}>New prompt</Button>
+            <Button
+              variant="ghost"
+              title={
+                pendingImport
+                  ? `"${pendingImport.id}" exists — click again to overwrite`
+                  : "Import a .prompt.json file"
+              }
+              onClick={importClick}
+            >
+              <Upload className="h-3.5 w-3.5" /> {pendingImport ? "Overwrite?" : "Import"}
+            </Button>
             {/* On a narrow panel the sidebar is a drawer, so the empty state needs
                 its own way into the prompt list. */}
             <Button variant="ghost" className="@4xl/lab:hidden" onClick={() => setDrawerOpen(true)}>
               <PanelLeft className="h-3.5 w-3.5" /> Browse
             </Button>
           </div>
+          {/* Import errors would otherwise be invisible here — the save-status
+              slot lives in the editor header, which the empty state doesn't have. */}
+          {saveError && <p className="max-w-sm text-center text-[11px] text-error">{saveError}</p>}
         </div>
       )}
     </div>

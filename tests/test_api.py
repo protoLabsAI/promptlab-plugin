@@ -82,6 +82,84 @@ def test_version_routes(registry, monkeypatch):
     assert r.json()["name"] == "V1"
 
 
+def test_export_downloads_json(registry):
+    client = _client(registry)
+    client.put(
+        "/api/plugins/promptlab/prompts/ex1",
+        json={"name": "E", "messages": [{"role": "user", "content": "hi"}]},
+    )
+    r = client.get("/api/plugins/promptlab/prompts/ex1/export")
+    assert r.status_code == 200
+    assert "attachment" in r.headers["content-disposition"]
+    assert "ex1.prompt.json" in r.headers["content-disposition"]
+    assert r.headers["content-type"].startswith("application/json")
+    assert r.json()["id"] == "ex1"
+    assert r.json()["name"] == "E"
+
+
+def test_export_404(registry):
+    client = _client(registry)
+    assert client.get("/api/plugins/promptlab/prompts/nope/export").status_code == 404
+
+
+def test_import_creates_prompt(registry):
+    client = _client(registry)
+    body = {"id": "imp1", "name": "Imported", "messages": [{"role": "user", "content": "hi"}]}
+    r = client.post("/api/plugins/promptlab/import", json=body)
+    assert r.status_code == 200
+    assert r.json()["id"] == "imp1"
+    got = client.get("/api/plugins/promptlab/prompts/imp1").json()
+    assert got["name"] == "Imported"
+    assert got["updated_by"] == "import"
+
+
+def test_import_conflict_409(registry):
+    client = _client(registry)
+    client.put("/api/plugins/promptlab/prompts/dup", json={"name": "Original"})
+    r = client.post("/api/plugins/promptlab/import", json={"id": "dup", "name": "New"})
+    assert r.status_code == 409
+    assert "overwrite" in r.json()["detail"]
+    # the existing prompt was NOT silently replaced
+    assert client.get("/api/plugins/promptlab/prompts/dup").json()["name"] == "Original"
+
+
+def test_import_overwrite(registry):
+    client = _client(registry)
+    client.put("/api/plugins/promptlab/prompts/dup", json={"name": "Original"})
+    r = client.post("/api/plugins/promptlab/import?overwrite=true", json={"id": "dup", "name": "New"})
+    assert r.status_code == 200
+    assert client.get("/api/plugins/promptlab/prompts/dup").json()["name"] == "New"
+
+
+def test_import_bad_id(registry):
+    client = _client(registry)
+    assert client.post("/api/plugins/promptlab/import", json={"id": "BAD ID"}).status_code == 400
+
+
+def test_export_import_round_trip(registry):
+    client = _client(registry)
+    body = {
+        "name": "RT",
+        "messages": [{"role": "system", "content": "Be {{style}}."}],
+        "tags": ["test"],
+        "model": "gpt-4",
+        "params": {"temperature": 0.5},
+    }
+    client.put("/api/plugins/promptlab/prompts/rt", json=body)
+    exported = client.get("/api/plugins/promptlab/prompts/rt/export").json()
+    # import into a new id
+    exported["id"] = "rt-copy"
+    r = client.post("/api/plugins/promptlab/import", json=exported)
+    assert r.status_code == 200
+    copy = client.get("/api/plugins/promptlab/prompts/rt-copy").json()
+    assert copy["name"] == "RT"
+    assert copy["messages"] == [{"role": "system", "content": "Be {{style}}."}]
+    assert copy["tags"] == ["test"]
+    assert copy["model"] == "gpt-4"
+    assert copy["params"] == {"temperature": 0.5}
+    assert copy["variables"] == ["style"]
+
+
 def test_run_route_streams_sse(registry, tmp_path):
     """The run route with an injected fake stream — SSE framing end to end."""
     from promptlab.api import build_data_router
