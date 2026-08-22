@@ -1,6 +1,7 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
+import { listPrompts } from "./api";
 import type { PromptDoc, PromptSummary } from "./types";
 
 // Host-free, like the pytest suite: every network-touching export is faked so
@@ -50,8 +51,10 @@ const sidebarCount = () => screen.getAllByPlaceholderText("Search prompts").leng
 
 async function openPrompt() {
   const utils = render(<App />);
-  // Static sidebar lists the prompt once the mocked listPrompts resolves.
-  fireEvent.click(await screen.findByText("Greeting"));
+  // The drawer auto-opens once the list loads with nothing selected; pick the
+  // prompt from it (second Sidebar in DOM order), which also dismisses it.
+  await waitFor(() => expect(sidebarCount()).toBe(2));
+  fireEvent.click(screen.getAllByText("Greeting", { selector: "nav button span" })[1]);
   // Header appears once the doc loads; the name button is the drawer toggle.
   const toggle = await screen.findByTitle("Switch prompt");
   return { ...utils, toggle };
@@ -108,8 +111,49 @@ describe("mobile prompt switcher (header name toggle)", () => {
   });
 
   it("still opens the drawer from the empty state's Browse button", async () => {
-    render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: /Browse/ }));
+    const { container } = render(<App />);
+    // Dismiss the auto-opened drawer first — Browse is the manual fallback.
+    await waitFor(() => expect(sidebarCount()).toBe(2));
+    fireEvent.click(container.querySelector('div[class*="bg-black/40"]')!);
+    expect(sidebarCount()).toBe(1);
+    fireEvent.click(screen.getByRole("button", { name: /Browse/ }));
     expect(sidebarCount()).toBe(2);
+  });
+});
+
+describe("mobile empty-state drawer auto-open", () => {
+  it("auto-opens the drawer when prompts load with none selected", async () => {
+    render(<App />);
+    // One (static) sidebar at mount; the drawer joins it once listPrompts resolves.
+    await waitFor(() => expect(sidebarCount()).toBe(2));
+  });
+
+  it("fires only once — dismissing the drawer keeps it closed", async () => {
+    const { container } = render(<App />);
+    await waitFor(() => expect(sidebarCount()).toBe(2));
+    fireEvent.click(container.querySelector('div[class*="bg-black/40"]')!);
+    // Without the one-shot gate the effect would bounce it straight back open
+    // (its deps re-run when drawerOpen flips false in the empty state).
+    expect(sidebarCount()).toBe(1);
+    await act(async () => {});
+    expect(sidebarCount()).toBe(1);
+  });
+
+  it("stays closed when there are no prompts", async () => {
+    vi.mocked(listPrompts).mockResolvedValueOnce([]);
+    render(<App />);
+    await act(async () => {}); // flush the (empty) list load
+    expect(sidebarCount()).toBe(1);
+    // Empty state unchanged — its intro copy is still what's on screen.
+    expect(screen.getByText(/Write, version, and test-run/)).toBeTruthy();
+  });
+
+  it("selecting from the auto-opened drawer closes it and loads the prompt", async () => {
+    render(<App />);
+    await waitFor(() => expect(sidebarCount()).toBe(2));
+    // Static (CSS-hidden) sidebar renders first; the drawer's copy is second.
+    fireEvent.click(screen.getAllByText("Greeting", { selector: "nav button span" })[1]);
+    await screen.findByTitle("Switch prompt");
+    expect(sidebarCount()).toBe(1);
   });
 });

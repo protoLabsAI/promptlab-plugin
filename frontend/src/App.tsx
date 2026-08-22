@@ -22,6 +22,17 @@ export default function App() {
   // Narrow-panel prompt-list drawer (only reachable below @4xl — the static
   // sidebar takes over above it, so stale `true` is harmless there).
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // One-shot: when the list first arrives with prompts and nothing selected
+  // (fresh narrow-panel load), open the drawer so the user lands on their
+  // prompts instead of hunting for the subtle Browse button. The ref keeps a
+  // later close-then-deselect from bouncing it back open. No @4xl gate needed:
+  // the drawer overlay is @4xl/lab:hidden, so stale `true` renders nothing there.
+  const hasAutoOpened = useRef(false);
+  useEffect(() => {
+    if (hasAutoOpened.current || prompts.length === 0 || doc !== null || isNew || drawerOpen) return;
+    hasAutoOpened.current = true;
+    setDrawerOpen(true);
+  }, [prompts, doc, isNew, drawerOpen]);
   // Armed state for the two-step delete; disarms itself after a beat.
   const [confirmDelete, setConfirmDelete] = useState(false);
   useEffect(() => {
