@@ -1,0 +1,19 @@
+name: Release
+
+# Thin caller for the org's reusable plugin-release workflow. Fires on a
+# `chore: release vX.Y.Z` push to main (or a manual dispatch), then tags, cuts
+# the GitHub Release with LLM-themed notes, and pings Discord. The `if` guard
+# keeps forks from releasing and skips ordinary pushes to main.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  release:
+    if: >-
+      github.repository == 'protoLabsAI/promptlab-plugin' &&
+      (github.event_name == 'workflow_dispatch' ||
+       startsWith(github.event.head_commit.message, 'chore: release v'))
+    uses: protoLabsAI/release-tools/.github/workflows/plugin-release.yml@v2
+    secrets: inherit

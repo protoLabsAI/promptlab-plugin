@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -15,6 +16,13 @@ def test_version_lockstep_with_pyproject():
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     version = re.search(r'^version = "([^"]+)"', pyproject, re.M).group(1)
     assert MANIFEST["version"] == version
+
+
+def test_version_lockstep_with_frontend_package():
+    # The release workflow tags one version; a drifting frontend/package.json
+    # mints a bundle stamped for a version that never shipped. Keep it in step.
+    pkg = json.loads((ROOT / "frontend" / "package.json").read_text(encoding="utf-8"))
+    assert pkg["version"] == MANIFEST["version"]
 
 
 def test_ships_disabled_and_typed():
